@@ -105,50 +105,10 @@ def radd(ip_address : str, port : int, card_number : int, allow : int, floors : 
 
     return response
 
-def radd1(ip_address : str, port : int, card_number : int, board_serial : int, start_date : int, end_date : int):
-    hex_string = RADD_FUNC_CODE + ''.join(make_list(pad_zero(dec2hex(card_number), 8))[::-1]) + ''.join(make_list(pad_zero(dec2hex(board_serial), 8))[::-1])
-    hex_string += str(start_date) + str(end_date) + "01000000"
-    hex_string += "000000" + '0'*2*37
-    hex_string = space_string(hex_string.upper())
-
-    response = sendPacket(ip_address, port, hex_string)
-
-    return response
-
-def radd2(ip_address : str, port : int, card_number : int, board_serial : int, start_date : int, end_date : int):
-    hex_string = RADD_FUNC_CODE + ''.join(make_list(pad_zero(dec2hex(card_number), 8))[::-1]) + ''.join(make_list(pad_zero(dec2hex(board_serial), 8))[::-1])
-    hex_string += str(start_date) + str(end_date) + "00010000"
-    hex_string += "000000" + '0'*2*37
-    hex_string = space_string(hex_string.upper())
-
-    response = sendPacket(ip_address, port, hex_string)
-
-    return response
-
-def radd3(ip_address : str, port : int, card_number : int, board_serial : int, start_date : int, end_date : int):
-    hex_string = RADD_FUNC_CODE + ''.join(make_list(pad_zero(dec2hex(card_number), 8))[::-1]) + ''.join(make_list(pad_zero(dec2hex(board_serial), 8))[::-1])
-    hex_string += str(start_date) + str(end_date) + "00000100"
-    hex_string += "000000" + '0'*2*37
-    hex_string = space_string(hex_string.upper())
-
-    response = sendPacket(ip_address, port, hex_string)
-
-    return response
-
-def radd4(ip_address : str, port : int, card_number : int, board_serial : int, start_date : int, end_date : int):
-    hex_string = RADD_FUNC_CODE + ''.join(make_list(pad_zero(dec2hex(card_number), 8))[::-1]) + ''.join(make_list(pad_zero(dec2hex(board_serial), 8))[::-1])
-    hex_string += str(start_date) + str(end_date) + "00000001"
-    hex_string += "000000" + '0'*2*37
-    hex_string = space_string(hex_string.upper())
-
-    response = sendPacket(ip_address, port, hex_string)
-
-    return response
-
-def radd9(ip_address : str, port : int, card_number : int, gate_allow : int, board_serial : int, start_date : int, end_date : int):
-    hex_string = RADD_FUNC_CODE + ''.join(make_list(pad_zero(dec2hex(card_number), 8))[::-1]) + ''.join(make_list(pad_zero(dec2hex(board_serial), 8))[::-1])
-    hex_string += str(start_date) + str(end_date) + ''.join([f"0{gate_allow}" for i in range(0, 4)])
-    hex_string += "000000" + '0'*2*37
+def radd1(ip_address : str, port : int, card_number : int, gates_allow : list, board_serial : int, start_date : int, end_date : int):
+    hex_string = RADD_FUNC_CODE + ''.join(make_list(pad_zero(dec2hex(board_serial), 8))[::-1]) + ''.join(make_list(pad_zero(dec2hex(card_number), 8))[::-1])
+    hex_string += str(start_date) + str(end_date) + ''.join([f"0{i}" for i in gates_allow])
+    hex_string += USER_PASS + "00"*37
     hex_string = space_string(hex_string.upper())
 
     response = sendPacket(ip_address, port, hex_string)
@@ -181,11 +141,7 @@ def get_floors(floor_str : str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-radd", nargs=9, help="Add user rights")
-    parser.add_argument("-radd1", nargs=6, help="Add user rights for door")
-    parser.add_argument("-radd2", nargs=6, help="Add user rights for door")
-    parser.add_argument("-radd3", nargs=6, help="Add user rights for door")
-    parser.add_argument("-radd4", nargs=6, help="Add user rights for door")
-    parser.add_argument("-radd9", nargs=7, help="Add user rights for door")
+    parser.add_argument("-radd1", nargs=7, help="Add user rights for door")
     parser.add_argument("-rdel", nargs=7, help="Delete user rights")
     parser.add_argument("-getdata", nargs=4, help="Get recording data")
     args = parser.parse_args()
@@ -195,34 +151,21 @@ if __name__ == "__main__":
     path = None
     try:
         if args.radd is not None:
-            # eaccess.exe -radd ip_address port card_number allow floors board_serial start_date end_date path
+            # eaccess.exe -radd ip_address port card_number allow floors(csv) board_serial start_date end_date path
             params = args.radd
             if int(params[3]) > 1 or int(params[3]) < 0:
                 raise Exception("Invalid allow value. Must be 0 or 1.")
             response = radd(str(params[0]), int(params[1]), int(params[2]), int(params[3]), get_floors(str(params[4])), int(params[5]), int(params[6]), int(params[7]))
             path = str(params[8])
         elif args.radd1 is not None:
-            # eaccess.exe -radd1 ip_address port card_number gate_allow board_serial start_date end_date
+            # eaccess.exe -radd1 ip_address port card_number gates_allow(csv) board_serial start_date end_date
             params = args.radd1
-            response = radd1(str(params[0]), int(params[1]), int(params[2]), str(params[3]), int(params[4]), int(params[5]), int(params[6]))
-        elif args.radd2 is not None:
-            # eaccess.exe -radd2 ip_address port card_number board_serial start_date end_date
-            params = args.radd2
-            response = radd2(str(params[0]), int(params[1]), int(params[2]), int(params[4]), int(params[5]), int(params[6]))
-        elif args.radd3 is not None:
-            # eaccess.exe -radd3 ip_address port card_number board_serial start_date end_date
-            params = args.radd3
-            response = radd3(str(params[0]), int(params[1]), int(params[2]), int(params[4]), int(params[5]), int(params[6]))
-        elif args.radd4 is not None:
-            # eaccess.exe -radd4 ip_address port card_number board_serial start_date end_date
-            params = args.radd4
-            response = radd4(str(params[0]), int(params[1]), int(params[2]), int(params[4]), int(params[5]), int(params[6]))
-        elif args.radd9 is not None:
-            # eaccess.exe -radd9 ip_address port card_number gate_allow board_serial start_date end_date
-            params = args.radd9
-            if int(params[3]) > 1 or int(params[3]) < 0:
-                raise Exception("Invalid allow value. Must be 0 or 1.")
-            response = radd9(str(params[0]), int(params[1]), int(params[2]), int(params[3]), int(params[5]), int(params[6]), int(params[7]))
+            if len(params[3].split(',')) != 4:
+                raise Exception("Invalid gate allow values. Expected 4 values.")
+            for value in params[3].split(','):
+                if int(value) > 1 or int(value) < 0:
+                    raise Exception("Invalid gate allow value. Must be 0 or 1.")
+            response = radd1(str(params[0]), int(params[1]), int(params[2]), str(params[3]).split(','), int(params[4]), int(params[5]), int(params[6]))
         elif args.rdel is not None:
             # eaccess.exe -rdel ip_address port card_number board_serial start_date end_date path
             params = args.rdel
