@@ -118,7 +118,7 @@ def radd1(ip_address : str, port : int, card_number : int, gates_allow : list, b
 
 def rdelay(ip_address : str, port : int, board_serial : int, door : int, control : int, delay : int):
     hex_string = RDELAY_FUNC_CODE + ''.join(make_list(pad_zero(dec2hex(board_serial), 8))[::-1])
-    hex_string += f"0{door}" + f"0{control}" + f"0{delay}"
+    hex_string += f"0{door}" + f"0{control}" + pad_zero(f"{delay}", 2)
     hex_string += "00"*53
 
     response = sendPacket(ip_address, port, hex_string)
@@ -184,6 +184,8 @@ if __name__ == "__main__":
                 raise Exception("Invalid door number. Must be between 1 and 4 inclusive.")
             if int(params[4]) < 1 or int(params[4]) > 3:
                 raise Exception("Invalid control mode. Must be between 1 and 3 inclusive.")
+            if int(params[5]) < 0 or int(params[5]) > 99:
+                raise Exception("Invalid delay time. Must be between 0 and 99 inclusive.")
             response = rdelay(str(params[0]), int(params[1]), int(params[2]), int(params[3]), int(params[4]), int(params[5]))
         elif args.rdel is not None:
             # eaccess.exe -rdel ip_address port card_number board_serial start_date end_date path
