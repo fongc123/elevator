@@ -12,6 +12,7 @@ import os
 RADD_FUNC_CODE = "17500000"
 QUERY_FUNC_CODE = "17200000"
 RDELAY_FUNC_CODE = "17800000"
+DATETIME_FUNC_CODE = "17320000"
 START_DATE = "20100101"
 END_DATE = "20291231"
 USER_PASS = "000000"
@@ -95,7 +96,6 @@ def save_file(data, file_path):
 
 def generate_hex_string(number : int):
     result = dec2hex(number)
-    
 
 def radd(ip_address : str, port : int, card_number : int, allow : int, floors : list, board_serial : int, start_date : int, end_date : int):
     hex_string = RADD_FUNC_CODE + ''.join(make_list(pad_zero(dec2hex(board_serial), 8))[::-1]) + ''.join(make_list(pad_zero(dec2hex(card_number), 8))[::-1])
@@ -134,11 +134,33 @@ def rdel(ip_address : str, port : int, card_number : int, board_serial : int, st
 
     return response
 
-def getdata(ip_address : str, port : int, board_serial : int):
-    hex_string = QUERY_FUNC_CODE + ''.join(make_list(dec2hex(board_serial))[::-1]) + '0'*112
+def rdatetime(ip_address : str, port : int, board_serial : int):
+    hex_string = DATETIME_FUNC_CODE + ''.join(make_list(pad_zero(dec2hex(board_serial), 8))[::-1]) + "00"*56
     hex_string = space_string(hex_string.upper())
 
-    response = sendPacket(ip_address, port, hex_string)
+    datetime_str = ""
+    response = sendPacket(ip_address, port, hex_string).hex()[16:30]
+    for i in range(0, len(response), 2):
+        if i != len(response) - 2:
+            datetime_str += response[i:i+2] + ","
+        else:
+            datetime_str += response[i:i+2]
+
+    return datetime_str.replace(',', '', 1)
+
+def status(ip_address : str, port : int, board_serial : int):
+    hex_string = QUERY_FUNC_CODE + ''.join(make_list(dec2hex(board_serial))[::-1]) + '00'*56
+    hex_string = space_string(hex_string.upper())
+
+    dist = [4, 1, 1, 1, 1, 4, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 1]
+    status_str = ""
+    response = sendPacket(ip_address, port, hex_string).hex()[16:]
+    for idx, d in enumerate(dist):
+        if idx != len(dist) - 1:
+            status_str += response[:2*d] + ","
+            response = response[2*d:]
+        else:
+            status_str += response[:2*d]
 
     return response
 
@@ -153,8 +175,9 @@ if __name__ == "__main__":
     parser.add_argument("-radd", nargs=9, help="Add user rights")
     parser.add_argument("-radd1", nargs=7, help="Add user rights for door")
     parser.add_argument("-rdelay", nargs=6, help="Delay door open")
+    parser.add_argument("-rdatetime", nargs=4, help="Get board date and time")
+    parser.add_argument("-status", nargs=4, help="Get recording data")
     parser.add_argument("-rdel", nargs=7, help="Delete user rights")
-    parser.add_argument("-getdata", nargs=4, help="Get recording data")
     args = parser.parse_args()
 
     params = None
@@ -187,21 +210,31 @@ if __name__ == "__main__":
             if int(params[5]) < 0 or int(params[5]) > 99:
                 raise Exception("Invalid delay time. Must be between 0 and 99 inclusive.")
             response = rdelay(str(params[0]), int(params[1]), int(params[2]), int(params[3]), int(params[4]), int(params[5]))
+        elif args.rdatetime is not None:
+            # eaccess.exe -rdatetime ip_address port board_serial path
+            params = args.rdatetime
+            response = rdatetime(str(params[0]), int(params[1]), int(params[2]))
+            path = str(params[3])
+        elif args.status is not None:
+            # eaccess.exe -getdata ip_address port board_serial path
+            params = args.getdata
+            response = status(str(params[0]), int(params[1]), int(params[2]))
+            path = str(params[3])
         elif args.rdel is not None:
             # eaccess.exe -rdel ip_address port card_number board_serial start_date end_date path
             params = args.rdel
             response = rdel(str(params[0]), int(params[1]), int(params[2]), int(params[3]), int(params[4]), int(params[5]))
             path = str(params[6])
-        elif args.getdata is not None:
-            # eaccess.exe -getdata ip_address port board_serial path
-            params = args.getdata
-            response = getdata(str(params[0]), int(params[1]), int(params[2]))
-            path = str(params[3])
         else:
             raise Exception("No arguments given.")
     except Exception as e:
         print("Error: " + str(e))
     finally:
         if response is not None and params is not None and path is not None:
-            log = f"[{currentdate()}] {space_string(response.hex())}"
+            # check if response is hex
+            if response.hex().isnumeric():
+                log = f"[{currentdate()}] {space_string(response.hex())}"
+            else:
+                # response is string
+                log = f"[{currentdate()}] {response}"
             save_file(log, f"{str(path)}")
