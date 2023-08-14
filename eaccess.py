@@ -148,7 +148,8 @@ def rdatetime(ip_address : str, port : int, board_serial : int):
             datetime_str += response[i:i+2]
 
     pts = datetime_str.split(',')
-    return ''.join(pts[:3]) + ',' + ''.join(pts[4:])
+    print(pts)
+    return ''.join(pts[:4]) + ',' + ''.join(pts[4:])
 
 def status(ip_address : str, port : int, board_serial : int):
     hex_string = QUERY_FUNC_CODE + ''.join(make_list(dec2hex(board_serial))[::-1]) + '00'*56
@@ -198,6 +199,7 @@ if __name__ == "__main__":
     params = None
     response = None
     path = None
+    log_datetime = True
     try:
         if args.radd is not None:
             # eaccess.exe -radd ip_address port card_number allow floors(csv) board_serial start_date end_date path
@@ -230,11 +232,13 @@ if __name__ == "__main__":
             params = args.rdatetime
             response = rdatetime(str(params[0]), int(params[1]), int(params[2]))
             path = str(params[3])
+            log_datetime = False
         elif args.status is not None:
             # eaccess.exe -status ip_address port board_serial path
             params = args.status
             response = status(str(params[0]), int(params[1]), int(params[2]))
             path = str(params[3])
+            log_datetime = False
         elif args.rdel is not None:
             # eaccess.exe -rdel ip_address port card_number board_serial start_date end_date path
             params = args.rdel
@@ -248,8 +252,8 @@ if __name__ == "__main__":
         if response is not None and params is not None and path is not None:
             # check if response is hex
             if isinstance(response, bytes):
-                log = f"[{currentdate()}] {space_string(response.hex())}"
+                log = f"[{currentdate()}] {space_string(response.hex())}" if log_datetime else f"{space_string(response.hex())}"
             elif isinstance(response, str):
                 # response is string
-                log = f"[{currentdate()}] {response}"
+                log = f"[{currentdate()}] {response}" if log_datetime else f"{response}"
             save_file(log, f"{str(path)}")
