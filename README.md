@@ -13,4 +13,4 @@ Usage:
 - `radd1`: `eaccess.exe -radd1 ip_address port card_number gates_allow(csv) board_serial start_date end_date`
 - `rdelay`: `eaccess.exe -rdelay ip_adress port board_serial door control delay`
 - `rdatetime`: `eaccess.exe -rdatetime ip_address port board_serial path`
-- `status`: `eaccess.exe -getdata ip_address port board_serial path`
+- `status`: `eaccess.exe -status ip_address port board_serial path`
