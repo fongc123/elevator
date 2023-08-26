@@ -106,10 +106,10 @@ def radd(ip_address : str, port : int, card_number : int, allow : int, floors : 
 
     return response
 
-def radd1(ip_address : str, port : int, card_number : int, gates_allow : list, board_serial : int, start_date : int, end_date : int):
+def radd1(ip_address : str, port : int, card_number : int, gates_allow : list, board_serial : int, start_date : int, end_date : int, user_pass : int):
     hex_string = RADD_FUNC_CODE + ''.join(make_list(pad_zero(dec2hex(board_serial), 8))[::-1]) + ''.join(make_list(pad_zero(dec2hex(card_number), 8))[::-1])
     hex_string += str(start_date) + str(end_date) + ''.join([f"0{i}" for i in gates_allow])
-    hex_string += USER_PASS + "00"*37
+    hex_string += pad_zero(f"{user_pass}", 6) + "00"*37
     hex_string = space_string(hex_string.upper())
 
     response = sendPacket(ip_address, port, hex_string)
@@ -192,14 +192,14 @@ if __name__ == "__main__":
             response = radd(str(params[0]), int(params[1]), int(params[2]), int(params[3]), get_floors(str(params[4])), int(params[5]), int(params[6]), int(params[7]))
             path = str(params[8])
         elif args.radd1 is not None:
-            # eaccess.exe -radd1 ip_address port card_number gates_allow(csv) board_serial start_date end_date
+            # eaccess.exe -radd1 ip_address port card_number gates_allow(csv) board_serial start_date end_date user_pass
             params = args.radd1
             if len(params[3].split(',')) != 4:
                 raise Exception("Invalid gate allow values. Expected 4 values.")
             for value in params[3].split(','):
                 if int(value) > 1 or int(value) < 0:
                     raise Exception("Invalid gate allow value. Must be 0 or 1.")
-            response = radd1(str(params[0]), int(params[1]), int(params[2]), str(params[3]).split(','), int(params[4]), int(params[5]), int(params[6]))
+            response = radd1(str(params[0]), int(params[1]), int(params[2]), str(params[3]).split(','), int(params[4]), int(params[5]), int(params[6]), int(params[7]))
         elif args.rdelay is not None:
             # eaccess.exe -rdelay ip_adress port board_serial door control delay
             params = args.rdelay
