@@ -8,6 +8,7 @@ import json
 import argparse
 import datetime
 import os
+import re
 
 RADD_FUNC_CODE = "17500000"
 QUERY_FUNC_CODE = "17200000"
@@ -146,13 +147,15 @@ def rdatetime(ip_address : str, port : int, board_serial : int):
         else:
             datetime_str += response[i:i+2]
 
-    return datetime_str.replace(',', '', 1)
+    pts = datetime_str.split(',')
+    print(pts)
+    return ''.join(pts[:4]) + ',' + ''.join(pts[4:])
 
 def status(ip_address : str, port : int, board_serial : int):
     hex_string = QUERY_FUNC_CODE + ''.join(make_list(dec2hex(board_serial))[::-1]) + '00'*56
     hex_string = space_string(hex_string.upper())
 
-    dist = [4, 1, 1, 1, 1, 4, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 1]
+    dist = [4, 1, 1, 1, 1, 4, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4, 1, 1, 1, 1, 1, 1]
     status_str = ""
     response = sendPacket(ip_address, port, hex_string).hex()[16:]
     for idx, d in enumerate(dist):
@@ -162,7 +165,20 @@ def status(ip_address : str, port : int, board_serial : int):
         else:
             status_str += response[:2*d]
 
-    return response
+    # change first and sixth fields to decimal
+    pts = status_str.split(',')
+    status_str_list = []
+    for idx, s in enumerate(pts):            
+        if idx == 0 or idx == 5 or idx == 20 or idx == 21:
+            status_str_list.append(str(int(''.join(make_list(s)[::-1]), 16)))
+        elif idx == 17 or idx == 25:
+            status_str_list.append(''.join(pts[idx:idx+3]))
+        elif idx > 17 and idx < 20 or idx > 25:
+            continue
+        else:
+            status_str_list.append(s)
+
+    return ','.join(status_str_list)
 
 def get_floors(floor_str : str):
     if ',' in floor_str:
@@ -183,6 +199,7 @@ if __name__ == "__main__":
     params = None
     response = None
     path = None
+    log_datetime = True
     try:
         if args.radd is not None:
             # eaccess.exe -radd ip_address port card_number allow floors(csv) board_serial start_date end_date path
@@ -215,11 +232,13 @@ if __name__ == "__main__":
             params = args.rdatetime
             response = rdatetime(str(params[0]), int(params[1]), int(params[2]))
             path = str(params[3])
+            log_datetime = False
         elif args.status is not None:
-            # eaccess.exe -getdata ip_address port board_serial path
-            params = args.getdata
+            # eaccess.exe -status ip_address port board_serial path
+            params = args.status
             response = status(str(params[0]), int(params[1]), int(params[2]))
             path = str(params[3])
+            log_datetime = False
         elif args.rdel is not None:
             # eaccess.exe -rdel ip_address port card_number board_serial start_date end_date path
             params = args.rdel
@@ -232,9 +251,9 @@ if __name__ == "__main__":
     finally:
         if response is not None and params is not None and path is not None:
             # check if response is hex
-            if response.hex().isnumeric():
-                log = f"[{currentdate()}] {space_string(response.hex())}"
-            else:
+            if isinstance(response, bytes):
+                log = f"[{currentdate()}] {space_string(response.hex())}" if log_datetime else f"{space_string(response.hex())}"
+            elif isinstance(response, str):
                 # response is string
-                log = f"[{currentdate()}] {response}"
+                log = f"[{currentdate()}] {response}" if log_datetime else f"{response}"
             save_file(log, f"{str(path)}")
